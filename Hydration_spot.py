@@ -27,8 +27,8 @@ from sklearn.cluster import KMeans
 # 3: Collecting the position of the water molecules that lie within the convex hull for longer than a pre-defined lifetime  
 # 4: Clustering the collected data to determine areas of high water density and their centers
 
-# Input parameters  
-# python3 hydration_spot.py --traj  TRAJ_short.trr --top system.pdb --alpha 0.5 --water_index 5138 --deltat 1 --min_time 3 --ncluster 20
+# SAMPLE COMMAND FOR RUNNING THE SCRIPT
+# python3 Hydration_spot.py --traj  TRAJ_short.trr --top system.pdb --alpha 0.5  --deltat 1 --min_time 3 --ncluster 20
 #
 #
 ######################################################################################################################
@@ -57,7 +57,6 @@ def initialize ():
     parser.add_argument('--top',dest='topology',type=str,default='system.pdb',required=True,help='Structure: gro pdb ')
 # parameters  
     parser.add_argument('--alpha',dest='alpha',type=float,required=True,help='Alpha parameter for bulding convex hull which depents on the distance between the selected atoms, eg. 0.5')
-    parser.add_argument('--water_index',dest='water_index',type=int,required=True,help='The index of the first water')
     parser.add_argument('--deltat',dest='time_step',type=float,required=True,help='Time step between input frames (in unit of time values: fs, ps, ns, us, ms, s)')
     parser.add_argument('--min_time',dest='min_time',type=float,required=True,help='Pre-defined lifetime for intrested water molecules')
     parser.add_argument('--ncluster',dest='ncluster',type=int,required=True,help='Number of cluster centers')
@@ -67,13 +66,11 @@ def initialize ():
     trajectory = args.trajectory
     topology = args.topology
     alpha = args.alpha
-    water_index = args.water_index
     time_step= args.time_step 
     min_time = args.min_time
     ncluster = args.ncluster
     cluster = args.cluster
-
-    return trajectory, topology, alpha, water_index, time_step, min_time, ncluster, cluster
+    return trajectory, topology, alpha, time_step, min_time, ncluster, cluster
 
 
 def load_traj (trajectory,topol):
@@ -129,7 +126,7 @@ def plot_alpha_shape_with_point(alpha_shape,Win,Wout):
 
 def check_water(Nwat,alpha_shape,XYZ_wat,debug):
 
-# Check whether water is inside or outside of the convex hull
+# Check whether water id inside or outside of the convex hull
     Win = []
     Wout = []
     index = [0] * Nwat
@@ -211,7 +208,7 @@ def monotoneRanges(water_residence, min_count):
     return idx
 
 
-def lifetime(Nwat,min_time,time_step,water_index,W_index,traj):
+def lifetime(Nwat,min_time,time_step,water,W_index,traj):
 # Life time analysis 
 
     begin_time = datetime.datetime.now()
@@ -222,7 +219,7 @@ def lifetime(Nwat,min_time,time_step,water_index,W_index,traj):
     Active_water_XYZ = []
     min_count = round(min_time/time_step)
     for j in range(Nwat):
-            atom_idx = 4*j +  water_index #  is the index of first O atom of water input parameter 
+            atom_idx = water[j] #  is the index of first O atom of water input parameter 
             check_lifetime = monotoneRanges(extract(W_index,j), min_count)
             life_time.append(check_lifetime) 
             if check_lifetime: 
@@ -294,11 +291,11 @@ def clustering(Ncluster,XYZ_W_active, cluster):
 
 def main():
 
-    trajectory, topology, alpha, water_index, time_step, min_time, ncluster, cluster = initialize()       # initialization 
+    trajectory, topology, alpha, time_step, min_time, ncluster, cluster = initialize()       # initialization 
     if not cluster:
        traj, C_alpha, water, Nwat, Nstep = load_traj(trajectory,topology)                                  # load trajectory 
        W_index = build_alpha_shape(alpha,traj,C_alpha,water)                                               # build alpha shape           
-       XYZ_W_active = lifetime(Nwat,min_time,time_step,water_index,W_index,traj)                           # water life time analysis 
+       XYZ_W_active = lifetime(Nwat,min_time,time_step,water,W_index,traj)                           # water life time analysis 
        clustering(ncluster,XYZ_W_active, cluster)                                                          # kmeans clustering 
     else:
        XYZ_W_active = read_active_water('Active_water.xyz')                                                # read from Active_water_XYZ
